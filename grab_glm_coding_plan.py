@@ -40,6 +40,8 @@ except ImportError:
 # ==================== 配置 ====================
 # 加载用户配置
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.py")
+# Cookie 持久化文件（exe 模式下保存到用户目录）
+COOKIE_FILE = os.path.join(os.path.expanduser("~"), ".glm_coding_plan_cookie")
 
 def load_config() -> Dict[str, Any]:
     """加载配置"""
@@ -57,7 +59,7 @@ def load_config() -> Dict[str, Any]:
         "ic_code": "JO7VUQL6WC",  # 推广邀请码（写死在 exe 中）
         "referral_url": "https://www.bigmodel.cn/glm-coding",
     }
-    
+
     # 尝试从 config.py 加载
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
@@ -93,8 +95,43 @@ def load_config() -> Dict[str, Any]:
                         config["auto_renew"] = value.lower() == "true"
                 except Exception:
                     pass
-    
+
+    # 尝试从持久化 Cookie 文件加载（exe 模式下）
+    if not config["cookie"] and os.path.exists(COOKIE_FILE):
+        with open(COOKIE_FILE, "r") as f:
+            saved_cookie = f.read().strip()
+            if saved_cookie:
+                config["cookie"] = saved_cookie
+
     return config
+
+
+def save_cookie_to_file(cookie: str):
+    """保存 Cookie 到文件（持久化）"""
+    try:
+        with open(COOKIE_FILE, "w") as f:
+            f.write(cookie)
+    except Exception:
+        pass
+
+
+def prompt_for_cookie() -> str:
+    """交互式提示用户输入 Cookie"""
+    print("\n" + "=" * 50)
+    print("🔑 首次使用需要配置智谱AI Cookie")
+    print("=" * 50)
+    print()
+    print("📋 获取 Cookie 方法：")
+    print("   1. 登录 https://bigmodel.cn")
+    print("   2. 按 F12 打开开发者工具")
+    print("   3. 切换到 Network（网络）标签")
+    print("   4. 任意点击一个请求，复制 Request Headers 中的 Cookie")
+    print()
+    print("   或者在网页版控制台执行：document.cookie")
+    print()
+    print("-" * 50)
+    cookie = input("请粘贴 Cookie（输入完按回车）:\n>").strip()
+    return cookie
 
 
 # ==================== API 配置 ====================
@@ -401,12 +438,14 @@ def main():
     
     # 检查Cookie
     if not config["cookie"]:
-        print("❌ 错误：请配置智谱AI Cookie")
-        print("   1. 登录 https://bigmodel.cn")
-        print("   2. F12 打开开发者工具")
-        print("   3. Network → 任意请求 → 复制 Cookie")
-        print("   4. 编辑 config.py 或设置环境变量 ZHIPU_COOKIE")
-        sys.exit(1)
+        cookie = prompt_for_cookie()
+        if not cookie:
+            print("❌ 未输入 Cookie，程序退出")
+            sys.exit(1)
+        # 保存 Cookie 以便下次使用
+        save_cookie_to_file(cookie)
+        config["cookie"] = cookie
+        print("✅ Cookie 已保存，下次运行无需重新输入")
     
     # 验证Cookie
     if not validate_cookie(config["cookie"]):
