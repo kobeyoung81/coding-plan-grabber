@@ -134,6 +134,31 @@ def prompt_for_cookie() -> str:
     return cookie
 
 
+def prompt_for_mode() -> int:
+    """交互式选择抢购模式，返回模式编号"""
+    print("\n" + "=" * 50)
+    print("🕹️  选择抢购模式")
+    print("=" * 50)
+    print()
+    print("  [1] 📌 单次抢购")
+    print("       等待抢购时间到达，一次性尝试抢购买到为止")
+    print()
+    print("  [2] 🔄 守护模式")
+    print("       后台持续运行，每天 10:00 自动抢购")
+    print()
+    print("  [3] 🧪 测试模式")
+    print("       立即尝试抢购（不付款），测试脚本是否正常")
+    print()
+    print("-" * 50)
+    while True:
+        choice = input("请输入选项 [1/2/3](默认1): ").strip()
+        if choice == "":
+            choice = "1"
+        if choice in ("1", "2", "3"):
+            return int(choice)
+        print("⚠️ 无效选项，请输入 1、2 或 3")
+
+
 # ==================== API 配置 ====================
 API_BASE = "https://bigmodel.cn"
 API_SUBmit_ORDER = f"{API_BASE}/api/glm-coding-plan/order"
@@ -457,23 +482,32 @@ def main():
 ║   智谱AI编程套餐抢购工具                    ║
 ╚═══════════════════════════════════════════╝
     """)
-    
+
     # 处理信号
     def signal_handler(sig, frame):
         print("\n\n👋 退出抢购脚本")
         sys.exit(0)
-    
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    
+
+    # 命令行参数优先于交互选择
     if args.daemon:
         run_daemon(config)
     elif args.test:
         print("🧪 测试模式：立即尝试抢购\n")
         countdown_and_grab(config)
     else:
-        print("📌 单次抢购模式\n")
-        countdown_and_grab(config)
+        # 交互式选择模式
+        mode = prompt_for_mode()
+        if mode == 2:
+            run_daemon(config)
+        elif mode == 3:
+            print("🧪 测试模式：立即尝试抢购\n")
+            countdown_and_grab(config)
+        else:
+            print("📌 单次抢购模式\n")
+            countdown_and_grab(config)
 
 
 if __name__ == "__main__":
