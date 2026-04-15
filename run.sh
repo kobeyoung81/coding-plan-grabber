@@ -1,0 +1,38 @@
+#!/bin/bash
+# GLM Coding Plan 抢购脚本运行器
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$DIR"
+
+# 检查依赖
+if ! python3 -c "import requests" 2>/dev/null; then
+    echo "📦 安装依赖..."
+    pip install requests httpx -q
+fi
+
+# 检查配置
+if [ ! -s "config.py" ] || grep -q 'COOKIE = ""' config.py 2>/dev/null; then
+    echo "⚠️  请先配置 config.py 中的 COOKIE"
+    echo "   1. 登录 https://bigmodel.cn"
+    echo "   2. F12 → Network → 复制 Cookie"
+    echo "   3. 填入 config.py"
+    exit 1
+fi
+
+# 运行模式
+MODE=${1:-single}
+
+case "$MODE" in
+    daemon)
+        echo "🚀 启动守护模式..."
+        python3 grab_glm_coding_plan.py --daemon
+        ;;
+    test)
+        echo "🧪 测试模式..."
+        python3 grab_glm_coding_plan.py --test
+        ;;
+    *)
+        echo "📌 单次抢购..."
+        python3 grab_glm_coding_plan.py
+        ;;
+esac

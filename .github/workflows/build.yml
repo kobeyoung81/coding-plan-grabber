@@ -1,0 +1,51 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller requests
+
+      - name: Build EXE
+        run: |
+          pyinstaller --onefile --name "GLM_Coding_Plan" --console grab_glm_coding_plan.py
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: GLM_Coding_Plan_exe
+          path: dist/GLM_Coding_Plan.exe
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: GLM_Coding_Plan_exe
+          path: dist/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/GLM_Coding_Plan.exe
+          body: "GLM Coding Plan 自动抢购工具 v1.0"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
